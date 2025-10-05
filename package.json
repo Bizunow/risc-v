@@ -1,0 +1,17 @@
+{
+  "name": "risc-v",
+  "version": "1.0.0",
+  "description": "Simple RISC-V emulator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node ./index.ts"
+  },
+  "author": "bizunow13",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.12.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
