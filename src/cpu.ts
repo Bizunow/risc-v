@@ -159,17 +159,66 @@ export class CPU {
         return true;
     }
 
+    private processSTypeInstructions(instruction: number): boolean {
+        const opCode = extractBits(instruction, 0, 6);
+        
+        // S-Type instruction decoding
+        const sTypeFunc3 = extractBits(instruction, 12, 14);
+        const sTypeXs1 = extractBits(instruction, 15, 19);  // Base address register
+        const sTypeXs2 = extractBits(instruction, 20, 24);  // Source data register
+        const sTypeImm4_0 = extractBits(instruction, 7, 11);
+        const sTypeImm11_5 = extractBits(instruction, 25, 31);
+        
+        // Reconstruct the 12-bit immediate
+        const sTypeImmd = (sTypeImm11_5 << 5) | sTypeImm4_0;
+        
+        switch (opCode) {
+            case 0x23: {  // STORE opcode
+                // Calculate virtual address with sign extension
+                const signedImm = (sTypeImmd << 20) >> 20;  // Sign extend 12-bit immediate
+                const virtualAddress = (this.register[sTypeXs1] + signedImm) >>> 0;
+                const sourceValue = this.register[sTypeXs2];
+                
+                switch (sTypeFunc3) {
+                    case 0x0: {
+                        // SB - Store Byte
+                        // M[addr] = X[xs2][7:0]
+                        this.mem.write(virtualAddress, sourceValue & 0xFF);
+                    } break;
+                    case 0x1: {
+                        // SH - Store Halfword (16-bit, little-endian)
+                        // M[addr] = X[xs2][15:0]
+                        this.mem.write(virtualAddress + 0, (sourceValue >> 0) & 0xFF);
+                        this.mem.write(virtualAddress + 1, (sourceValue >> 8) & 0xFF);
+                    } break;
+                    case 0x2: {
+                        // SW - Store Word (32-bit, little-endian)
+                        // M[addr] = X[xs2][31:0]
+                        this.mem.write(virtualAddress + 0, (sourceValue >>  0) & 0xFF);
+                        this.mem.write(virtualAddress + 1, (sourceValue >>  8) & 0xFF);
+                        this.mem.write(virtualAddress + 2, (sourceValue >> 16) & 0xFF);
+                        this.mem.write(virtualAddress + 3, (sourceValue >> 24) & 0xFF);
+                    } break;
+                    default: {
+                        return false;
+                    }
+                }
+            } break;
+            default: {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
     private processRV32I(instruction: number): boolean {
         return (
             this.processUTypeInstructions(instruction) ||
             this.processJTypeInstructions(instruction) ||
-            this.processITypeInstructions(instruction)
+            this.processITypeInstructions(instruction) ||
+            this.processSTypeInstructions(instruction)
         );
-
-        // bType
-        // beq, bne, blt, bge, bltu, bgeu
-
-        return true;
     }
 
     private processM(): boolean {

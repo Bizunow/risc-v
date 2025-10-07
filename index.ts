@@ -13,7 +13,8 @@ function toLittleEndianBytes(value: number): Uint8Array {
 
 // ToDo: separate program & data memory
 // ToDo: проверить jalr
-// Реализовать sX (store), потом тестить lb, lh, lw, lbu, lhu
+// ToDo: bType - beq, bne, blt, bge, bltu, bgeu
+// Реализовать тестить lb, lh, lw, lbu, lhu через SX (store)
 
 const main = async () => {
     const mem = new Memory();
