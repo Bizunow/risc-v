@@ -11,6 +11,7 @@ function toLittleEndianBytes(value: number): Uint8Array {
     ]);
 }
 
+// ToDo: separate program & data memory
 // ToDo: проверить jalr
 // Реализовать sX (store), потом тестить lb, lh, lw, lbu, lhu
 

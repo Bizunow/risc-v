@@ -1,18 +1,3 @@
-// Ширина: равна XLEN — 32 бита для RV32, 64 бита для RV64, 128 для RV128 (если поддерживается).
-// Особый регистр x0: всегда равен нулю, запись в него игнорируется (hardwired zero).
-// Имена по ABI и их типичные роли:
-// x0 = zero — константа 0.
-// x1 = ra — return address (адрес возврата).
-// x2 = sp — stack pointer (указатель стека), должен быть корректно поддержан.
-// x3 = gp — global pointer (глобальный указатель для мелких данных).
-// x4 = tp — thread pointer (для TLS).
-// x5–x7 = t0–t2 — временные / caller‑saved.
-// x8 = s0 / fp — saved register или frame pointer (s0 и одно и то же место).
-// x9 = s1 — сохранённый регистр.
-// x10–x17 = a0–a7 — аргументы / возвращаемые значения (caller‑saved).
-// x18–x27 = s2–s11 — сохранённые регистры (callee‑saved).
-// x28–x31 = t3–t6 — дополнительные временные (caller‑saved)
-
 import { Memory } from "./mem";
 import { extractBits } from "./utils";
 
@@ -39,9 +24,8 @@ export class CPU {
         }
     }
 
-    private processRV32I(instruction: number): boolean {
+    private processUTypeInstructions(instruction: number): boolean {
         const opCode = extractBits(instruction, 0, 6);
-
         const uTypeXd = extractBits(instruction, 7, 11);
         const uTypeImmd = extractBits(instruction, 12, 31);
 
@@ -57,8 +41,16 @@ export class CPU {
                 const s32 = uTypeImmd | 0;
                 this.setRegister(uTypeXd, (this.pc + s32) >>> 0);
             } break;
+            default: {
+                return false;
+            }
         }
 
+        return true;
+    }
+
+    private processJTypeInstructions(instruction: number): boolean {
+        const opCode = extractBits(instruction, 0, 6);
         // J-Type instruction decoding
         const jTypeXd = extractBits(instruction, 7, 11);
         // J-Type immediate is encoded in a special order:
@@ -83,8 +75,17 @@ export class CPU {
                 const signedImm = (jTypeImmd << 11) >> 11;
                 this.nextPc = (this.pc + signedImm) >>> 0;
             } break;
+            default: {
+                return false;
+            }
         }
 
+        return true;
+    }
+
+    private processITypeInstructions(instruction: number): boolean {
+        const opCode = extractBits(instruction, 0, 6);
+        
         const iTypeXd = extractBits(instruction, 7, 11);
         const iTypeFunc3 = extractBits(instruction, 12, 14);
         const iTypeXs1 = extractBits(instruction, 15, 19);
@@ -145,9 +146,25 @@ export class CPU {
                         const halfword = (byte1 << 8) | byte0; // Little-endian
                         this.setRegister(iTypeXd, halfword);
                     } break;
+                    default: {
+                        return false;
+                    }
                 }
             } break;
+            default: {
+                return false;
+            }
         }
+
+        return true;
+    }
+
+    private processRV32I(instruction: number): boolean {
+        return (
+            this.processUTypeInstructions(instruction) ||
+            this.processJTypeInstructions(instruction) ||
+            this.processITypeInstructions(instruction)
+        );
 
         // bType
         // beq, bne, blt, bge, bltu, bgeu
