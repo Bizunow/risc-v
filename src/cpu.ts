@@ -27,6 +27,7 @@ export class CPU {
     ];
 
     private pc = 0;
+    private nextPc = 0;
 
     constructor(mem: Memory) {
         this.mem = mem;
@@ -68,7 +69,7 @@ export class CPU {
                 // X[xd] = return_addr;
                 // jump_halfword($pc + $signed(imm));
                 this.setRegister(jTypeXd, this.pc + 4);
-                this.pc += this.pc + (jTypeImmd | 0);
+                this.nextPc = this.pc + (jTypeImmd | 0);
             } break;
         }
 
@@ -89,7 +90,7 @@ export class CPU {
                 const addr = ((this.register[iTypeXs1] + signedImm) & ~1) >>> 0;
                 const returnAddr = (this.pc + 4) >>> 0;
                 this.setRegister(iTypeXd, returnAddr);
-                this.pc = addr;
+                this.nextPc = addr;
             } break;
             case 0x03: {
                 // Вычисляем виртуальный адрес
@@ -154,6 +155,8 @@ export class CPU {
             (this.mem.read(this.pc + 3) << 24)
         );
 
+        this.nextPc = this.pc + 4;
+
         const modules: ((i: number) => boolean)[] = [
             this.processRV32I.bind(this),
             this.processM.bind(this)
@@ -165,7 +168,7 @@ export class CPU {
             }
         }
 
-        // Change PC
+        this.pc = this.nextPc;
     }
 
     public dump() {
