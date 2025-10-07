@@ -91,6 +91,49 @@ export class CPU {
                 this.setRegister(iTypeXd, returnAddr);
                 this.pc = addr;
             } break;
+            case 0x03: {
+                // Вычисляем виртуальный адрес
+                const signedImm = (iTypeImmd << 20) >> 20; // Знаковое расширение 12-битного immediate
+                const virtualAddress = (this.register[iTypeXs1] + signedImm) >>> 0;
+                
+                switch (iTypeFunc3) {
+                    case 0x0: {
+                        // LB - Load Byte (знаковое расширение)
+                        const byte = this.mem.read(virtualAddress);
+                        const signExtended = (byte << 24) >> 24;
+                        this.setRegister(iTypeXd, signExtended >>> 0);
+                    } break;
+                    case 0x1: {
+                        // LH - Load Halfword (знаковое расширение)
+                        const byte0 = this.mem.read(virtualAddress + 0);
+                        const byte1 = this.mem.read(virtualAddress + 1);
+                        const halfword = (byte1 << 8) | byte0; // Little-endian
+                        const signExtended = (halfword << 16) >> 16;
+                        this.setRegister(iTypeXd, signExtended >>> 0);
+                    } break;
+                    case 0x2: {
+                        // LW - Load Word
+                        const byte0 = this.mem.read(virtualAddress + 0);
+                        const byte1 = this.mem.read(virtualAddress + 1);
+                        const byte2 = this.mem.read(virtualAddress + 2);
+                        const byte3 = this.mem.read(virtualAddress + 3);
+                        const word = (byte3 << 24) | (byte2 << 16) | (byte1 << 8) | byte0;
+                        this.setRegister(iTypeXd, word >>> 0);
+                    } break;
+                    case 0x4: {
+                        // LBU - Load Byte Unsigned
+                        const byte = this.mem.read(virtualAddress);
+                        this.setRegister(iTypeXd, byte);
+                    } break;
+                    case 0x5: {
+                        // LHU - Load Halfword Unsigned
+                        const byte0 = this.mem.read(virtualAddress + 0);
+                        const byte1 = this.mem.read(virtualAddress + 1);
+                        const halfword = (byte1 << 8) | byte0; // Little-endian
+                        this.setRegister(iTypeXd, halfword);
+                    } break;
+                }
+            } break;
         }
 
         // bType
