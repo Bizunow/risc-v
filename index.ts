@@ -11,7 +11,8 @@ function toLittleEndianBytes(value: number): Uint8Array {
     ]);
 }
 
-// ToDo: проверить jalr, lb, lh, lw, lbu, lhu
+// ToDo: проверить jalr
+// Реализовать sX (store), потом тестить lb, lh, lw, lbu, lhu
 
 const main = async () => {
     const mem = new Memory();
@@ -27,7 +28,7 @@ const main = async () => {
     }
 
     memWrite(0x00001097);
-    memWrite(0x00a002ef);
+    memWrite(0x00400083);
 
     const cpu = new CPU(mem);
     cpu.step();
