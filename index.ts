@@ -11,18 +11,28 @@ function toLittleEndianBytes(value: number): Uint8Array {
     ]);
 }
 
-// ToDo: проверить jal, jalr, lb, lh, lw, lbu, lhu
+// ToDo: проверить jalr, lb, lh, lw, lbu, lhu
 
 const main = async () => {
     const mem = new Memory();
-    
-    const [b0, b1, b2, b3] = toLittleEndianBytes(0x00001097);
-    mem.write(0, b0);
-    mem.write(1, b1);
-    mem.write(2, b2);
-    mem.write(3, b3);
+    let adress = 0;
+
+    const memWrite = (word: number) => {
+        const [b0, b1, b2, b3] = toLittleEndianBytes(word); 
+        mem.write(adress + 0, b0);
+        mem.write(adress + 1, b1);
+        mem.write(adress + 2, b2);
+        mem.write(adress + 3, b3);
+        adress += 4;
+    }
+
+    memWrite(0x00001097);
+    memWrite(0x00a002ef);
 
     const cpu = new CPU(mem);
+    cpu.step();
+    cpu.dump();
+
     cpu.step();
     cpu.dump();
 }

@@ -59,8 +59,18 @@ export class CPU {
             } break;
         }
 
+        // J-Type instruction decoding
         const jTypeXd = extractBits(instruction, 7, 11);
-        const jTypeImmd = extractBits(instruction, 12, 31);
+        // J-Type immediate is encoded in a special order:
+        // inst[31]    -> imm[20]
+        // inst[30:21] -> imm[10:1]
+        // inst[20]    -> imm[11]
+        // inst[19:12] -> imm[19:12]
+        const jTypeImm20 = extractBits(instruction, 31, 31);
+        const jTypeImm10_1 = extractBits(instruction, 21, 30);
+        const jTypeImm11 = extractBits(instruction, 20, 20);
+        const jTypeImm19_12 = extractBits(instruction, 12, 19);
+        const jTypeImmd = (jTypeImm20 << 20) | (jTypeImm19_12 << 12) | (jTypeImm11 << 11) | (jTypeImm10_1 << 1);
 
         switch (opCode) {
             case 0x6f: {
@@ -68,8 +78,10 @@ export class CPU {
                 // XReg return_addr = $pc + 4;
                 // X[xd] = return_addr;
                 // jump_halfword($pc + $signed(imm));
-                this.setRegister(jTypeXd, this.pc + 4);
-                this.nextPc = this.pc + (jTypeImmd | 0);
+                const returnAddr = (this.pc + 4) >>> 0;
+                this.setRegister(jTypeXd, returnAddr);
+                const signedImm = (jTypeImmd << 11) >> 11;
+                this.nextPc = (this.pc + signedImm) >>> 0;
             } break;
         }
 
