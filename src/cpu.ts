@@ -39,13 +39,12 @@ export class CPU {
     }
 
     private processRV32I(instruction: number): boolean {
-        const uTypeOpCode = extractBits(instruction, 0, 6);
+        const opCode = extractBits(instruction, 0, 6);
+
         const uTypeXd = extractBits(instruction, 7, 11);
         const uTypeImmd = extractBits(instruction, 12, 31);
 
-        console.log(instruction, uTypeOpCode, uTypeXd, uTypeImmd);
-
-        switch (uTypeOpCode) {
+        switch (opCode) {
             case 0x37: {
                 // LUI
                 // X[xd] = imm;
@@ -57,10 +56,45 @@ export class CPU {
                 const s32 = uTypeImmd | 0;
                 this.setRegister(uTypeXd, (this.pc + s32) >>> 0);
             } break;
-            default: {
-                return false;
-            }
         }
+
+        const jTypeXd = extractBits(instruction, 7, 11);
+        const jTypeImmd = extractBits(instruction, 12, 31);
+
+        switch (opCode) {
+            case 0x6f: {
+                // JAL
+                // XReg return_addr = $pc + 4;
+                // X[xd] = return_addr;
+                // jump_halfword($pc + $signed(imm));
+                this.setRegister(jTypeXd, this.pc + 4);
+                this.pc += this.pc + (jTypeImmd | 0);
+            } break;
+        }
+
+        const iTypeXd = extractBits(instruction, 7, 11);
+        const iTypeFunc3 = extractBits(instruction, 12, 14);
+        const iTypeXs1 = extractBits(instruction, 15, 19);
+        const iTypeImmd = extractBits(instruction, 20, 31);
+
+        switch (opCode) {
+            case 0x67: {
+                // JALR
+                // XReg addr = (X[xs1] + $signed(imm)) & ~MXLEN'1;
+                // XReg returnaddr;
+                // returnaddr = $pc + 4;
+                // X[xd] = returnaddr;
+                // jump(addr);
+                const signedImm = (iTypeImmd << 20) >> 20; // Sign extend 12-bit immediate
+                const addr = ((this.register[iTypeXs1] + signedImm) & ~1) >>> 0;
+                const returnAddr = (this.pc + 4) >>> 0;
+                this.setRegister(iTypeXd, returnAddr);
+                this.pc = addr;
+            } break;
+        }
+
+        // bType
+        // beq, bne, blt, bge, bltu, bgeu
 
         return true;
     }
@@ -93,5 +127,6 @@ export class CPU {
 
     public dump() {
         console.log(this.register);
+        console.log(this.pc);
     }
 }

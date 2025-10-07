@@ -11,6 +11,8 @@ function toLittleEndianBytes(value: number): Uint8Array {
     ]);
 }
 
+// ToDo: проверить jal, jalr
+
 const main = async () => {
     const mem = new Memory();
     
