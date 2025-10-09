@@ -269,4 +269,8 @@ export class CPU {
         console.log(this.register);
         console.log(this.pc);
     }
+
+    public getRegisterValue(x: number): number {
+        return this.register[x];
+    }
 }
