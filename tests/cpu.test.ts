@@ -73,4 +73,40 @@ describe('CPU', () => {
         // cpu.dump = jest.fn(); // Mock dump to avoid console output
         expect(cpu.getRegisterValue(1)).toBe(0xff);
     });
+
+    test('Load halfword signed', () => {
+        // 0x00501083
+        // lh x1, 5(x0)
+        memory.write(0, 0x83);
+        memory.write(1, 0x10);
+        memory.write(2, 0x50);
+        memory.write(3, 0x00);
+        
+        // Write 0xFFFF (two bytes) at address 5-6
+        memory.write(5, 0xff);
+        memory.write(6, 0xff);
+
+        cpu.step();
+
+        // cpu.dump = jest.fn(); // Mock dump to avoid console output
+        expect(cpu.getRegisterValue(1)).toBe(-1);
+    });
+
+    test('Load halfword unsigned', () => {
+        // 0x00505083
+        // lhu x1, 5(x0)
+        memory.write(0, 0x83);
+        memory.write(1, 0x50);
+        memory.write(2, 0x50);
+        memory.write(3, 0x00);
+        
+        // Write 0xFFFF (two bytes) at address 5-6
+        memory.write(5, 0xff);
+        memory.write(6, 0xff);
+
+        cpu.step();
+
+        // cpu.dump = jest.fn(); // Mock dump to avoid console output
+        expect(cpu.getRegisterValue(1)).toBe(0xffff);
+    });
 });
