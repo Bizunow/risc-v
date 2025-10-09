@@ -92,19 +92,6 @@ export class CPU {
         const iTypeImmd = extractBits(instruction, 20, 31);
 
         switch (opCode) {
-            case 0x67: {
-                // JALR
-                // XReg addr = (X[xs1] + $signed(imm)) & ~MXLEN'1;
-                // XReg returnaddr;
-                // returnaddr = $pc + 4;
-                // X[xd] = returnaddr;
-                // jump(addr);
-                const signedImm = (iTypeImmd << 20) >> 20; // Sign extend 12-bit immediate
-                const addr = ((this.register[iTypeXs1] + signedImm) & ~1) >>> 0;
-                const returnAddr = (this.pc + 4) >>> 0;
-                this.setRegister(iTypeXd, returnAddr);
-                this.nextPc = addr;
-            } break;
             case 0x03: {
                 // Вычисляем виртуальный адрес
                 const signedImm = (iTypeImmd << 20) >> 20; // Знаковое расширение 12-битного immediate
@@ -150,6 +137,35 @@ export class CPU {
                         return false;
                     }
                 }
+            } break;
+            case 0x13: {
+                // I-Type arithmetic/logic operations
+                const signedImm = (iTypeImmd << 20) >> 20; // Sign extend 12-bit immediate
+                
+                switch (iTypeFunc3) {
+                    case 0x0: {
+                        // ADDI - Add Immediate
+                        // X[xd] = X[xs1] + signed(imm)
+                        const result = (this.register[iTypeXs1] + signedImm) >>> 0;
+                        this.setRegister(iTypeXd, result);
+                    } break;
+                    default: {
+                        return false;
+                    }
+                }
+            } break;
+            case 0x67: {
+                // JALR
+                // XReg addr = (X[xs1] + $signed(imm)) & ~MXLEN'1;
+                // XReg returnaddr;
+                // returnaddr = $pc + 4;
+                // X[xd] = returnaddr;
+                // jump(addr);
+                const signedImm = (iTypeImmd << 20) >> 20; // Sign extend 12-bit immediate
+                const addr = ((this.register[iTypeXs1] + signedImm) & ~1) >>> 0;
+                const returnAddr = (this.pc + 4) >>> 0;
+                this.setRegister(iTypeXd, returnAddr);
+                this.nextPc = addr;
             } break;
             default: {
                 return false;
