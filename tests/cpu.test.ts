@@ -15,6 +15,20 @@ describe('CPU', () => {
         expect(cpu).toBeInstanceOf(CPU);
     });
 
+    test('Register x0 should be immutable', () => {
+        // ADDI x0, x0, 42 (0x02a00013)
+        // This adds 42 to register x0 (which is always 0) and stores in x1
+        memory.write(0, 0x13);
+        memory.write(1, 0x00);
+        memory.write(2, 0xa0);
+        memory.write(3, 0x02);
+
+        cpu.step();
+
+        cpu.dump = jest.fn(); // Mock dump to avoid console output
+        expect(cpu.getRegisterValue(0)).toBe(0);
+    });
+
     test('Should execute ADDI instruction', () => {
         // ADDI x1, x0, 42 (0x02a00093)
         // This adds 42 to register x0 (which is always 0) and stores in x1
