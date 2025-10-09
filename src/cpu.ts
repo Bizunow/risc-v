@@ -31,9 +31,9 @@ export class CPU {
 
         switch (opCode) {
             case 0x37: {
-                // LUI
-                // X[xd] = imm;
-                this.setRegister(uTypeXd, uTypeImmd);
+                // LUI - Load Upper Immediate
+                // X[xd] = imm << 12;
+                this.setRegister(uTypeXd, (uTypeImmd << 12) >>> 0);
             } break;
             case 0x17: {
                 // AUIPC
