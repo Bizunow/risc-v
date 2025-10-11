@@ -83,6 +83,84 @@ export class CPU {
         return true;
     }
 
+    private processBTypeInstructions(instruction: number): boolean {
+        const opCode = extractBits(instruction, 0, 6);
+        
+        // B-Type instruction decoding
+        const bTypeFunc3 = extractBits(instruction, 12, 14);
+        const bTypeXs1 = extractBits(instruction, 15, 19);
+        const bTypeXs2 = extractBits(instruction, 20, 24);
+        
+        // B-Type immediate is encoded in a special order:
+        // inst[31]    -> imm[12]
+        // inst[30:25] -> imm[10:5]
+        // inst[11:8]  -> imm[4:1]
+        // inst[7]     -> imm[11]
+        const bTypeImm12 = extractBits(instruction, 31, 31);
+        const bTypeImm10_5 = extractBits(instruction, 25, 30);
+        const bTypeImm4_1 = extractBits(instruction, 8, 11);
+        const bTypeImm11 = extractBits(instruction, 7, 7);
+        const bTypeImmd = (bTypeImm12 << 12) | (bTypeImm11 << 11) | (bTypeImm10_5 << 5) | (bTypeImm4_1 << 1);
+        
+        switch (opCode) {
+            case 0x63: {  // BRANCH opcode
+                const rs1Value = this.register[bTypeXs1];
+                const rs2Value = this.register[bTypeXs2];
+                const signedImm = (bTypeImmd << 19) >> 19;  // Sign extend 13-bit immediate
+                let takeBranch = false;
+                
+                switch (bTypeFunc3) {
+                    case 0x0: {
+                        // BEQ - Branch if Equal
+                        // if (X[xs1] == X[xs2]) jump_halfword($pc + $signed(imm))
+                        takeBranch = (rs1Value === rs2Value);
+                    } break;
+                    case 0x1: {
+                        // BNE - Branch if Not Equal
+                        // if (X[xs1] != X[xs2]) jump_halfword($pc + $signed(imm))
+                        takeBranch = (rs1Value !== rs2Value);
+                    } break;
+                    case 0x4: {
+                        // BLT - Branch if Less Than (signed)
+                        // if ($signed(X[xs1]) < $signed(X[xs2])) jump_halfword($pc + $signed(imm))
+                        const signedRs1 = rs1Value | 0;
+                        const signedRs2 = rs2Value | 0;
+                        takeBranch = (signedRs1 < signedRs2);
+                    } break;
+                    case 0x5: {
+                        // BGE - Branch if Greater or Equal (signed)
+                        // if ($signed(X[xs1]) >= $signed(X[xs2])) jump_halfword($pc + $signed(imm))
+                        const signedRs1 = rs1Value | 0;
+                        const signedRs2 = rs2Value | 0;
+                        takeBranch = (signedRs1 >= signedRs2);
+                    } break;
+                    case 0x6: {
+                        // BLTU - Branch if Less Than (unsigned)
+                        // if (X[xs1] < X[xs2]) jump_halfword($pc + $signed(imm))
+                        takeBranch = (rs1Value >>> 0) < (rs2Value >>> 0);
+                    } break;
+                    case 0x7: {
+                        // BGEU - Branch if Greater or Equal (unsigned)
+                        // if (X[xs1] >= X[xs2]) jump_halfword($pc + $signed(imm))
+                        takeBranch = (rs1Value >>> 0) >= (rs2Value >>> 0);
+                    } break;
+                    default: {
+                        return false;
+                    }
+                }
+                
+                if (takeBranch) {
+                    this.nextPc = (this.pc + signedImm) >>> 0;
+                }
+            } break;
+            default: {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
     private processITypeInstructions(instruction: number): boolean {
         const opCode = extractBits(instruction, 0, 6);
         
@@ -232,6 +310,7 @@ export class CPU {
         return (
             this.processUTypeInstructions(instruction) ||
             this.processJTypeInstructions(instruction) ||
+            this.processBTypeInstructions(instruction) ||
             this.processITypeInstructions(instruction) ||
             this.processSTypeInstructions(instruction)
         );
@@ -272,5 +351,9 @@ export class CPU {
 
     public getRegisterValue(x: number): number {
         return this.register[x];
+    }
+
+    public getProgramCounter(): number {
+        return this.pc;
     }
 }
