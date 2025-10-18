@@ -28,16 +28,16 @@ import { extractBits } from "./utils";
 // + slli
 // + srli
 // + srai
-// add
-// sub
-// sll
-// slt
-// sltu
-// xor
-// srl
-// sra
-// or
-// and
+// + add
+// + sub
+// + sll
+// + slt
+// + sltu
+// + xor
+// + srl
+// + sra
+// + or
+// + and
 // fence
 // ecall
 // ebreak
@@ -408,13 +408,141 @@ export class CPU {
         return true;
     }
 
+    private processRTypeInstructions(instruction: number): boolean {
+        const opCode = extractBits(instruction, 0, 6);
+        
+        // R-Type instruction decoding
+        const rTypeXd = extractBits(instruction, 7, 11);
+        const rTypeFunc3 = extractBits(instruction, 12, 14);
+        const rTypeXs1 = extractBits(instruction, 15, 19);
+        const rTypeXs2 = extractBits(instruction, 20, 24);
+        const rTypeFunc7 = extractBits(instruction, 25, 31);
+        
+        switch (opCode) {
+            case 0x33: {  // R-Type arithmetic/logic operations
+                const rs1Value = this.register[rTypeXs1];
+                const rs2Value = this.register[rTypeXs2];
+                
+                switch (rTypeFunc3) {
+                    case 0x0: {
+                        if (rTypeFunc7 === 0x00) {
+                            // ADD - Add
+                            // X[xd] = X[xs1] + X[xs2]
+                            const result = (rs1Value + rs2Value) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else if (rTypeFunc7 === 0x20) {
+                            // SUB - Subtract
+                            // X[xd] = X[xs1] - X[xs2]
+                            const result = (rs1Value - rs2Value) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    case 0x1: {
+                        // SLL - Shift Left Logical
+                        // X[xd] = X[xs1] << (X[xs2] & 0x1F)
+                        if (rTypeFunc7 === 0x00) {
+                            const shamt = rs2Value & 0x1F;
+                            const result = (rs1Value << shamt) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    case 0x2: {
+                        // SLT - Set Less Than (signed)
+                        // X[xd] = ($signed(X[xs1]) < $signed(X[xs2])) ? 1 : 0
+                        if (rTypeFunc7 === 0x00) {
+                            const rs1Signed = rs1Value | 0;
+                            const rs2Signed = rs2Value | 0;
+                            const result = (rs1Signed < rs2Signed) ? 1 : 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    case 0x3: {
+                        // SLTU - Set Less Than Unsigned
+                        // X[xd] = (X[xs1] < X[xs2]) ? 1 : 0
+                        if (rTypeFunc7 === 0x00) {
+                            const rs1Unsigned = rs1Value >>> 0;
+                            const rs2Unsigned = rs2Value >>> 0;
+                            const result = (rs1Unsigned < rs2Unsigned) ? 1 : 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    case 0x4: {
+                        // XOR - Exclusive OR
+                        // X[xd] = X[xs1] ^ X[xs2]
+                        if (rTypeFunc7 === 0x00) {
+                            const result = (rs1Value ^ rs2Value) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    case 0x5: {
+                        if (rTypeFunc7 === 0x00) {
+                            // SRL - Shift Right Logical
+                            // X[xd] = X[xs1] >> (X[xs2] & 0x1F) (logical)
+                            const shamt = rs2Value & 0x1F;
+                            const result = (rs1Value >>> shamt) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else if (rTypeFunc7 === 0x20) {
+                            // SRA - Shift Right Arithmetic
+                            // X[xd] = $signed(X[xs1]) >> (X[xs2] & 0x1F) (arithmetic)
+                            const shamt = rs2Value & 0x1F;
+                            const rs1Signed = rs1Value | 0;
+                            const result = (rs1Signed >> shamt) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    case 0x6: {
+                        // OR - Bitwise OR
+                        // X[xd] = X[xs1] | X[xs2]
+                        if (rTypeFunc7 === 0x00) {
+                            const result = (rs1Value | rs2Value) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    case 0x7: {
+                        // AND - Bitwise AND
+                        // X[xd] = X[xs1] & X[xs2]
+                        if (rTypeFunc7 === 0x00) {
+                            const result = (rs1Value & rs2Value) >>> 0;
+                            this.setRegister(rTypeXd, result);
+                        } else {
+                            return false;
+                        }
+                    } break;
+                    default: {
+                        return false;
+                    }
+                }
+            } break;
+            default: {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
     private processRV32I(instruction: number): boolean {
         return (
             this.processUTypeInstructions(instruction) ||
             this.processJTypeInstructions(instruction) ||
             this.processBTypeInstructions(instruction) ||
             this.processITypeInstructions(instruction) ||
-            this.processSTypeInstructions(instruction)
+            this.processSTypeInstructions(instruction) ||
+            this.processRTypeInstructions(instruction)
         );
     }
 
