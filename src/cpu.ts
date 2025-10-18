@@ -1,6 +1,47 @@
 import { Memory } from "./mem";
 import { extractBits } from "./utils";
 
+// + lui
+// + auipc
+// + jal
+// + jalr
+// + beq
+// + bne
+// + blt
+// + bge
+// + bltu
+// + bgeu
+// + lb
+// + lh
+// + lw
+// + lbu
+// + lhu
+// + sb
+// + sh
+// + sw
+// + addi
+// + slti
+// + sltiu
+// + xori
+// + ori
+// + andi
+// + slli
+// + srli
+// + srai
+// add
+// sub
+// sll
+// slt
+// sltu
+// xor
+// srl
+// sra
+// or
+// and
+// fence
+// ecall
+// ebreak
+
 export class CPU {
     private mem: Memory;
 
@@ -226,6 +267,67 @@ export class CPU {
                         // X[xd] = X[xs1] + signed(imm)
                         const result = (this.register[iTypeXs1] + signedImm) >>> 0;
                         this.setRegister(iTypeXd, result);
+                    } break;
+                    case 0x2: {
+                        // SLTI - Set Less Than Immediate (signed)
+                        // X[xd] = ($signed(X[xs1]) < $signed(imm)) ? 1 : 0
+                        const rs1Signed = this.register[iTypeXs1] | 0;
+                        const result = (rs1Signed < signedImm) ? 1 : 0;
+                        this.setRegister(iTypeXd, result);
+                    } break;
+                    case 0x3: {
+                        // SLTIU - Set Less Than Immediate Unsigned
+                        // X[xd] = (X[xs1] < imm) ? 1 : 0
+                        // Note: immediate is sign-extended then treated as unsigned
+                        const rs1Unsigned = this.register[iTypeXs1] >>> 0;
+                        const immUnsigned = signedImm >>> 0;
+                        const result = (rs1Unsigned < immUnsigned) ? 1 : 0;
+                        this.setRegister(iTypeXd, result);
+                    } break;
+                    case 0x4: {
+                        // XORI - XOR Immediate
+                        // X[xd] = X[xs1] ^ $signed(imm)
+                        const result = (this.register[iTypeXs1] ^ signedImm) >>> 0;
+                        this.setRegister(iTypeXd, result);
+                    } break;
+                    case 0x6: {
+                        // ORI - OR Immediate
+                        // X[xd] = X[xs1] | $signed(imm)
+                        const result = (this.register[iTypeXs1] | signedImm) >>> 0;
+                        this.setRegister(iTypeXd, result);
+                    } break;
+                    case 0x7: {
+                        // ANDI - AND Immediate
+                        // X[xd] = X[xs1] & $signed(imm)
+                        const result = (this.register[iTypeXs1] & signedImm) >>> 0;
+                        this.setRegister(iTypeXd, result);
+                    } break;
+                    case 0x1: {
+                        // SLLI - Shift Left Logical Immediate
+                        // X[xd] = X[xs1] << shamt
+                        // shamt is bits [24:20] of the immediate (lower 5 bits)
+                        const shamt = extractBits(iTypeImmd, 0, 4);
+                        const result = (this.register[iTypeXs1] << shamt) >>> 0;
+                        this.setRegister(iTypeXd, result);
+                    } break;
+                    case 0x5: {
+                        // SRLI or SRAI - Shift Right Logical/Arithmetic Immediate
+                        // Differentiated by bit 30 (bit 10 of iTypeImmd)
+                        const shamt = extractBits(iTypeImmd, 0, 4);
+                        const bit30 = extractBits(iTypeImmd, 10, 10);
+                        
+                        if (bit30 === 0) {
+                            // SRLI - Shift Right Logical Immediate
+                            // X[xd] = X[xs1] >> shamt (logical)
+                            const result = (this.register[iTypeXs1] >>> shamt) >>> 0;
+                            this.setRegister(iTypeXd, result);
+                        } else {
+                            // SRAI - Shift Right Arithmetic Immediate
+                            // X[xd] = $signed(X[xs1]) >> shamt (arithmetic)
+                            const rs1Signed = this.register[iTypeXs1] | 0;
+                            const result = (rs1Signed >> shamt) >>> 0;
+                            this.setRegister(iTypeXd, result);
+                        }
                     } break;
                     default: {
                         return false;
